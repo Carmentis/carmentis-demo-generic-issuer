@@ -1,0 +1,60 @@
+{{!-- Page d'affichage unique de la clé d'API en clair --}}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <h2 class="fw-bold mb-4">Clé d'API créée</h2>
+
+    <div class="alert alert-warning d-flex gap-3 align-items-start mb-4">
+      <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0 mt-1"></i>
+      <div>
+        <strong>Copiez cette clé maintenant.</strong><br>
+        <span class="small">Elle ne sera <strong>plus jamais affichée</strong>. Si vous la perdez, créez-en une nouvelle.</span>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">{{apiKey.label}}</span>
+        <span class="badge bg-success-subtle text-success border border-success-subtle small">
+          <i class="bi bi-check-circle-fill me-1"></i>Active
+        </span>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">Valeur de la clé (en clair, une seule fois)</p>
+        <div class="code-block fs-6 mb-3 d-flex justify-content-between align-items-center gap-2">
+          <span id="apiKeyValue" style="word-break:break-all">{{plainKey}}</span>
+          <button class="btn btn-sm btn-outline-secondary copy-btn flex-shrink-0"
+            onclick="copyText(document.getElementById('apiKeyValue').textContent, this)"
+            style="color:#e2e8f0; border-color:#4a5568">
+            <i class="bi bi-clipboard me-1"></i>Copier
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+      <div class="card-header py-3">
+        <i class="bi bi-terminal me-2 text-muted"></i>Exemples d'utilisation
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-1">Via <code>X-API-Key</code> :</p>
+        <div class="code-block mb-3 small">
+          curl -X POST /api/{{apiKey.signingKeyId}}/issue \<br>
+          &nbsp;&nbsp;-H "X-API-Key: <span class="text-warning">{{plainKey}}</span>" \<br>
+          &nbsp;&nbsp;-H "Content-Type: application/json" \<br>
+          &nbsp;&nbsp;-d '{...}'
+        </div>
+        <p class="small text-muted mb-1">Via <code>Authorization: Bearer</code> :</p>
+        <div class="code-block small">
+          curl -X POST /api/{{apiKey.signingKeyId}}/issue \<br>
+          &nbsp;&nbsp;-H "Authorization: Bearer <span class="text-warning">{{plainKey}}</span>" \<br>
+          &nbsp;&nbsp;-H "Content-Type: application/json" \<br>
+          &nbsp;&nbsp;-d '{...}'
+        </div>
+      </div>
+    </div>
+
+    <a href="/admin/keys/{{keyId}}" class="btn btn-primary">
+      <i class="bi bi-arrow-left me-1"></i>Retour à la clé de signature
+    </a>
+  </div>
+</div>

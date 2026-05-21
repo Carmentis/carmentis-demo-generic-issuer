@@ -1,0 +1,116 @@
+# ============================================================
+# SD-JWT Generic Issuer — Configuration exemple
+# ============================================================
+# Ce fichier documente toutes les options disponibles.
+# Le serveur lit ses paramètres depuis les variables d'environnement.
+# Pour utiliser ce fichier avec Docker ou systemd, voir ci-dessous.
+#
+# Usage avec Docker :
+#   docker run --env-file <(toml2env config.toml) ...
+#
+# Usage avec systemd (EnvironmentFile) :
+#   Convertir en KEY=VALUE et référencer via EnvironmentFile=
+# ============================================================
+
+[server]
+# Port d'écoute HTTP (défaut : 3000)
+# Var d'env : PORT
+port = 3000
+
+[storage]
+# Répertoire de stockage contenant :
+#   - issuer.sqlite        : base de données SQLite
+#   - admin_pass.txt       : mot de passe admin initial (lu au 1er démarrage)
+# Chemin absolu recommandé en production.
+# Var d'env : STORAGE_DIR
+dir = "/data/issuer"
+
+# Secret utilisé pour dériver la clé AES-256-GCM via HKDF.
+# Minimum 32 caractères. Changer ce secret invalide TOUTES les clés privées stockées.
+# Garder ce secret en lieu sûr (coffre de secrets, HSM, etc.).
+# Var d'env : STORAGE_SECRET
+secret = "CHANGE_ME_use_a_long_random_secret_32chars_min"
+
+[auth]
+# Secret de signature des tokens JWT admin (sessions de l'interface d'administration).
+# Indépendant des clés Ed25519 gérées par le serveur.
+# Var d'env : JWT_SECRET
+jwt_secret = "CHANGE_ME_jwt_admin_secret"
+
+# ============================================================
+# Variables d'environnement équivalentes
+# ============================================================
+#
+#   PORT=3000
+#   STORAGE_DIR=/data/issuer
+#   STORAGE_SECRET=CHANGE_ME_use_a_long_random_secret_32chars_min
+#   JWT_SECRET=CHANGE_ME_jwt_admin_secret
+#
+# ============================================================
+# Initialisation de l'admin
+# ============================================================
+#
+# Avant le premier démarrage, créer le fichier de mot de passe :
+#
+#   mkdir -p /data/issuer
+#   echo "MonMotDePasseInitial!" > /data/issuer/admin_pass.txt
+#   chmod 600 /data/issuer/admin_pass.txt
+#
+# Au démarrage, le serveur lira ce fichier, créera l'utilisateur
+# "admin" en base de données (hash bcrypt), puis le fichier peut
+# être supprimé.
+#
+# ============================================================
+# Exemple de démarrage rapide (développement)
+# ============================================================
+#
+#   mkdir -p ./storage
+#   echo "DevPassword123!" > ./storage/admin_pass.txt
+#
+#   STORAGE_DIR=./storage \
+#   STORAGE_SECRET=dev-secret-minimum-32-characters-ok \
+#   JWT_SECRET=dev-jwt-secret \
+#   PORT=3000 \
+#   pnpm start:dev
+#
+# Interface admin : http://localhost:3000/admin
+# Login : admin / DevPassword123!
+#
+# ============================================================
+# Exemple d'utilisation de l'API après configuration
+# ============================================================
+#
+# 1. Créer une clé via l'interface admin (identifier: "mon-projet")
+#
+# 2. Générer une clé d'API pour cette clé via l'interface admin
+#
+# 3. Émettre un credential :
+#
+#   curl -X POST http://localhost:3000/api/mon-projet/issue \
+#     -H "X-API-Key: <votre-clé-api>" \
+#     -H "Content-Type: application/json" \
+#     -d '{
+#       "vct": "MonCredential",
+#       "subject": "did:jwk:...",
+#       "claims": {
+#         "prenom": "Alice",
+#         "email": "alice@example.com"
+#       },
+#       "disclosableClaims": ["email"]
+#     }'
+#
+# 4. Récupérer la clé publique :
+#
+#   curl http://localhost:3000/api/mon-projet/publicKey
+#   curl http://localhost:3000/api/mon-projet/publicKey?format=did-jwk
+#
+# 5. Vérifier un credential :
+#
+#   curl -X POST http://localhost:3000/api/mon-projet/verify \
+#     -H "Content-Type: application/json" \
+#     -d '{"token": "<sd-jwt-vc>"}'
+#
+# 6. Consulter la liste de révocation :
+#
+#   curl http://localhost:3000/api/mon-projet/credential/status
+#

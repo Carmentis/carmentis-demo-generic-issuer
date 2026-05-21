@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — SD-JWT Issuer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #1a1f35 0%, #2d3452 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-wrap { width: 100%; max-width: 400px; padding: 1rem; }
+    .card { border: none; border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,.35); }
+    .brand-icon {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, #0d6efd, #6610f2);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; color: #fff;
+      margin: 0 auto 1rem;
+    }
+    .btn { border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="card">
+      <div class="card-body p-4 p-sm-5">
+        <div class="brand-icon"><i class="bi bi-shield-lock-fill"></i></div>
+        <h5 class="text-center fw-bold mb-1">SD-JWT Issuer</h5>
+        <p class="text-center text-muted small mb-4">Interface d'administration</p>
+
+        {{#if error}}
+        <div class="alert alert-danger d-flex align-items-center gap-2 py-2">
+          <i class="bi bi-exclamation-circle-fill"></i> {{error}}
+        </div>
+        {{/if}}
+
+        <form method="POST" action="/admin/login">
+          <div class="mb-3">
+            <label for="username" class="form-label fw-semibold small">Nom d'utilisateur</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+              <input type="text" class="form-control border-start-0 ps-0" id="username" name="username"
+                value="admin" required autofocus autocomplete="username">
+            </div>
+          </div>
+          <div class="mb-4">
+            <label for="password" class="form-label fw-semibold small">Mot de passe</label>
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+              <input type="password" class="form-control border-start-0 ps-0" id="password" name="password"
+                required autocomplete="current-password">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+            Se connecter <i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

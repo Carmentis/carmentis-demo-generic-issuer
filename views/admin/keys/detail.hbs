@@ -1,0 +1,160 @@
+{{!-- Détail d'une clé de signature --}}
+<div class="d-flex align-items-center mb-4 gap-3">
+  <a href="/admin/keys" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+  <div>
+    <h2 class="mb-0 fw-bold">{{key.name}}</h2>
+    <code class="key-badge small">{{key.identifier}}</code>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Informations -->
+  <div class="col-md-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-header py-3">
+        <i class="bi bi-info-circle me-2 text-primary"></i>Informations
+      </div>
+      <div class="card-body pb-2">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-muted fw-normal">Nom</dt>
+          <dd class="col-7">{{key.name}}</dd>
+          <dt class="col-5 text-muted fw-normal">Identifier</dt>
+          <dd class="col-7"><code>{{key.identifier}}</code></dd>
+          <dt class="col-5 text-muted fw-normal">Créée le</dt>
+          <dd class="col-7">{{key.createdAt}}</dd>
+          <dt class="col-5 text-muted fw-normal">Statuts alloués</dt>
+          <dd class="col-7">
+            {{key.statusListCurrent}} / {{key.statusListSize}}
+            <div class="progress mt-1" style="height:4px">
+              <div class="progress-bar" style="width:{{key.statusListPercent}}%"></div>
+            </div>
+          </dd>
+        </dl>
+      </div>
+      <div class="card-body border-top pt-3 pb-3">
+        <p class="small fw-semibold mb-2 text-muted">Endpoints API</p>
+        <ul class="list-unstyled mb-0 small">
+          <li class="mb-1"><code>GET /api/{{key.identifier}}/publicKey</code></li>
+          <li class="mb-1">
+            <code>POST /api/{{key.identifier}}/issue</code>
+            <span class="badge bg-warning text-dark ms-1">API key</span>
+          </li>
+          <li class="mb-1"><code>POST /api/{{key.identifier}}/verify</code></li>
+          <li><code>GET /api/{{key.identifier}}/credential/status</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clé publique -->
+  <div class="col-md-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-lock-fill me-2 text-success"></i>Clé publique (Ed25519)</span>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <p class="small text-muted mb-0">Format JWK</p>
+          <button class="btn btn-sm btn-outline-secondary copy-btn"
+            onclick="copyText(document.getElementById('jwkBlock').textContent, this)">
+            <i class="bi bi-clipboard me-1"></i>Copier
+          </button>
+        </div>
+        <div class="code-block mb-3" id="jwkBlock">{{key.publicJwkFormatted}}</div>
+
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <p class="small text-muted mb-0">Format did:jwk</p>
+          <button class="btn btn-sm btn-outline-secondary copy-btn"
+            onclick="copyText(document.getElementById('didBlock').textContent, this)">
+            <i class="bi bi-clipboard me-1"></i>Copier
+          </button>
+        </div>
+        <div class="code-block" id="didBlock" style="font-size:.7em; overflow-wrap:anywhere; line-height:1.5">{{key.didJwk}}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clés d'API -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header py-3 d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-key me-2 text-warning"></i>Clés d'API</span>
+    <a href="/admin/keys/{{key.id}}/api-keys/new" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle clé d'API
+    </a>
+  </div>
+  {{#if key.apiKeys.length}}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Label</th>
+          <th>Préfixe</th>
+          <th>Statut</th>
+          <th>Créée le</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each key.apiKeys}}
+        <tr class="{{#if this.isRevoked}}opacity-50{{/if}}">
+          <td>{{this.label}}</td>
+          <td><code class="key-badge">{{this.keyPrefix}}…</code></td>
+          <td>
+            {{#if this.isRevoked}}
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+              <i class="bi bi-x-circle-fill me-1"></i>Révoquée
+            </span>
+            {{else}}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              <i class="bi bi-check-circle-fill me-1"></i>Active
+            </span>
+            {{/if}}
+          </td>
+          <td class="text-muted small">{{this.createdAt}}</td>
+          <td class="text-end">
+            {{#unless this.isRevoked}}
+            <form action="/admin/keys/{{../key.id}}/api-keys/{{this.id}}/revoke" method="POST" class="d-inline"
+                  onsubmit="return confirm('Révoquer cette clé d\'API ?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-slash-circle me-1"></i>Révoquer
+              </button>
+            </form>
+            {{/unless}}
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  {{else}}
+  <div class="card-body text-center py-4 text-muted">
+    <div class="mb-2" style="font-size:2rem; opacity:.3;"><i class="bi bi-key-fill"></i></div>
+    <p class="mb-2 small">Aucune clé d'API pour cette clé de signature.</p>
+    <a href="/admin/keys/{{key.id}}/api-keys/new" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Créer la première clé d'API
+    </a>
+  </div>
+  {{/if}}
+</div>
+
+<!-- Zone danger -->
+<div class="card border-danger-subtle">
+  <div class="card-header bg-danger-subtle text-danger-emphasis py-3">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>Zone de danger
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3">
+      La suppression de cette clé est <strong>irréversible</strong>.
+      Tous les credentials émis avec cette clé ne pourront plus être vérifiés.
+    </p>
+    <form action="/admin/keys/{{key.id}}/delete" method="POST"
+          onsubmit="return confirm('Supprimer définitivement la clé «\u202F{{key.name}}\u202F» et toutes ses données ?')">
+      <button type="submit" class="btn btn-danger btn-sm">
+        <i class="bi bi-trash3-fill me-1"></i>Supprimer cette clé
+      </button>
+    </form>
+  </div>
+</div>

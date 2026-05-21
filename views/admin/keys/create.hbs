@@ -1,0 +1,82 @@
+{{!-- Formulaire de création d'une nouvelle clé de signature --}}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="d-flex align-items-center mb-4">
+      <a href="/admin/keys" class="btn btn-sm btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-1"></i>Retour
+      </a>
+      <h2 class="mb-0 fw-bold">Nouvelle clé</h2>
+    </div>
+
+    {{#if error}}
+    <div class="alert alert-danger d-flex align-items-center gap-2">
+      <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+      <span>{{error}}</span>
+    </div>
+    {{/if}}
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <form method="POST" action="/admin/keys">
+          <div class="mb-3">
+            <label for="name" class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name"
+              placeholder="ex : Clé Université Paris"
+              value="{{form.name}}" required autofocus>
+            <div class="form-text">Nom descriptif affiché dans l'interface.</div>
+          </div>
+
+          <div class="mb-4">
+            <label for="identifier" class="form-label fw-semibold">Identifier <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text text-muted small">/api/</span>
+              <input type="text" class="form-control" id="identifier" name="identifier"
+                placeholder="ex : universite-paris"
+                value="{{form.identifier}}" pattern="[a-z0-9-]+"
+                required oninput="validateIdentifier(this)">
+              <span class="input-group-text text-muted small">/*</span>
+            </div>
+            <div class="form-text">
+              Minuscules, chiffres et tirets. <strong>Immuable après création.</strong>
+            </div>
+            <div id="identifierFeedback" class="invalid-feedback"></div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-plus-lg me-1"></i>Créer la clé
+            </button>
+            <a href="/admin/keys" class="btn btn-outline-secondary">Annuler</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function validateIdentifier(input) {
+  const valid = /^[a-z0-9-]+$/.test(input.value);
+  const feedback = document.getElementById('identifierFeedback');
+  if (!valid && input.value.length > 0) {
+    input.classList.add('is-invalid');
+    input.classList.remove('is-valid');
+    feedback.textContent = 'Lettres minuscules, chiffres et tirets uniquement.';
+  } else if (input.value.length > 0) {
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+  } else {
+    input.classList.remove('is-invalid', 'is-valid');
+  }
+}
+// Auto-fill identifier from name
+document.getElementById('name').addEventListener('input', function () {
+  const id = document.getElementById('identifier');
+  if (id.dataset.touched) return;
+  id.value = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  validateIdentifier(id);
+});
+document.getElementById('identifier').addEventListener('input', function () {
+  this.dataset.touched = '1';
+});
+</script>

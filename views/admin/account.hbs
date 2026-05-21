@@ -1,0 +1,69 @@
+{{!-- Changement de mot de passe admin --}}
+<div class="row justify-content-center">
+  <div class="col-md-5 col-lg-4">
+    <h2 class="fw-bold mb-1">Mon compte</h2>
+    <p class="text-muted small mb-4">Modifier le mot de passe administrateur.</p>
+
+    {{#if error}}
+    <div class="alert alert-danger d-flex align-items-center gap-2">
+      <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i> {{error}}
+    </div>
+    {{/if}}
+    {{#if success}}
+    <div class="alert alert-success d-flex align-items-center gap-2">
+      <i class="bi bi-check-circle-fill flex-shrink-0"></i> {{success}}
+    </div>
+    {{/if}}
+
+    <div class="card shadow-sm">
+      <div class="card-header py-3">
+        <i class="bi bi-shield-lock me-2 text-primary"></i>Changer le mot de passe
+      </div>
+      <div class="card-body p-4">
+        <form action="/admin/account/change-password" method="POST">
+          <div class="mb-3">
+            <label for="oldPassword" class="form-label fw-semibold small">Mot de passe actuel</label>
+            <input type="password" class="form-control" id="oldPassword" name="oldPassword"
+              required autocomplete="current-password">
+          </div>
+          <div class="mb-3">
+            <label for="newPassword" class="form-label fw-semibold small">Nouveau mot de passe</label>
+            <input type="password" class="form-control" id="newPassword" name="newPassword"
+              required autocomplete="new-password" minlength="8" oninput="checkMatch()">
+          </div>
+          <div class="mb-4">
+            <label for="confirmPassword" class="form-label fw-semibold small">Confirmer</label>
+            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+              required autocomplete="new-password" minlength="8" oninput="checkMatch()">
+            <div id="matchFeedback" class="form-text d-none"></div>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-check2-circle me-1"></i>Enregistrer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function checkMatch() {
+  const np = document.getElementById('newPassword').value;
+  const cp = document.getElementById('confirmPassword').value;
+  const fb = document.getElementById('matchFeedback');
+  const conf = document.getElementById('confirmPassword');
+  if (!cp) { fb.classList.add('d-none'); conf.classList.remove('is-valid','is-invalid'); return; }
+  fb.classList.remove('d-none');
+  if (np === cp) {
+    fb.textContent = '✓ Les mots de passe correspondent.';
+    fb.className = 'form-text text-success';
+    conf.classList.replace('is-invalid','is-valid');
+    conf.classList.add('is-valid');
+  } else {
+    fb.textContent = 'Les mots de passe ne correspondent pas.';
+    fb.className = 'form-text text-danger';
+    conf.classList.replace('is-valid','is-invalid');
+    conf.classList.add('is-invalid');
+  }
+}
+</script>
