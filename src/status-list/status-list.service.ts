@@ -43,28 +43,40 @@ export class StatusListService {
 		credentialId: string,
 	): Promise<CredentialStatusEntity> {
 		return this.dataSource.transaction(async (manager) => {
-			// Recharger la clé avec un verrou pour éviter les conflits d'index
 			const keyRepo = manager.getRepository(SigningKeyEntity);
-			const key = await keyRepo.findOne({
-				where: { id: signingKey.id },
-				lock: { mode: 'pessimistic_write' },
-			});
 
+			// Lire le compteur courant
+			const key = await keyRepo.findOne({ where: { id: signingKey.id } });
 			if (!key) {
 				throw new Error(`Clé introuvable : ${signingKey.id}`);
 			}
 
 			const index = key.statusListCurrent;
-
 			if (index >= key.statusListSize) {
 				throw new Error(
 					`La liste de statut de la clé "${key.identifier}" est pleine (${key.statusListSize} entrées max)`,
 				);
 			}
 
-			// Incrémenter le compteur
-			key.statusListCurrent = index + 1;
-			await keyRepo.save(key);
+			// UPDATE atomique conditionnel : n'incrémente que si la valeur n'a pas changé.
+			// SQLite sérialise les écritures par connexion, ce qui suffit ici.
+			// Le résultat affected = 0 signifie qu'une concurrence a modifié la valeur
+			// entre le SELECT et l'UPDATE — on lève une erreur explicite.
+			const result = await keyRepo
+				.createQueryBuilder()
+				.update(SigningKeyEntity)
+				.set({ statusListCurrent: index + 1 })
+				.where('id = :id AND statusListCurrent = :expected', {
+					id: key.id,
+					expected: index,
+				})
+				.execute();
+
+			if (result.affected === 0) {
+				throw new Error(
+					'Conflit d\'allocation d\'index de statut : réessayez l\'opération',
+				);
+			}
 
 			// Créer l'entrée de statut
 			const statusRepo = manager.getRepository(CredentialStatusEntity);
