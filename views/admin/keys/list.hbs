@@ -2,11 +2,16 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2 class="mb-0 fw-bold">Clés de signature</h2>
-    <p class="text-muted small mb-0 mt-1">Gérez les clés Ed25519 utilisées pour émettre des SD-JWT-VC.</p>
+    <p class="text-muted small mb-0 mt-1">Gérez les clés utilisées pour émettre des SD-JWT-VC.</p>
   </div>
-  <a href="/admin/keys/new" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i> Nouvelle clé
-  </a>
+  <div class="d-flex gap-2">
+    <a href="/admin/keys/import" class="btn btn-outline-primary">
+      <i class="bi bi-upload me-1"></i> Importer
+    </a>
+    <a href="/admin/keys/new" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i> Nouvelle clé
+    </a>
+  </div>
 </div>
 
 {{#if keys.length}}
@@ -17,6 +22,7 @@
         <tr>
           <th>Nom</th>
           <th>Identifier</th>
+          <th>Algo</th>
           <th>Clés d'API</th>
           <th>Credentials</th>
           <th>Créée le</th>
@@ -28,6 +34,7 @@
         <tr>
           <td class="fw-semibold">{{this.name}}</td>
           <td><code class="key-badge">{{this.identifier}}</code></td>
+          <td><span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">{{this.algorithm}}</span></td>
           <td>
             {{#if this.activeApiKeyCount}}
             <span class="badge bg-success-subtle text-success border border-success-subtle">

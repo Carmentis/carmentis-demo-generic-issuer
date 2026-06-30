@@ -118,6 +118,45 @@ export class AdminController {
 		}
 	}
 
+	/** Formulaire d'import d'une clé existante (PEM) */
+	@Get('keys/import')
+	@UseGuards(JwtAdminGuard)
+	@Render('admin/keys/import')
+	getImportKeyPage() {
+		return { title: 'Importer une clé' };
+	}
+
+	/** Traite l'import d'une clé existante au format PEM */
+	@Post('keys/import')
+	@UseGuards(JwtAdminGuard)
+	async importKey(
+		@Body()
+		body: {
+			name: string;
+			identifier: string;
+			privateKeyPem: string;
+			certificatePem?: string;
+		},
+		@Res() res: Response,
+	) {
+		try {
+			await this.adminService.importKey(
+				body.name,
+				body.identifier,
+				body.privateKeyPem,
+				body.certificatePem,
+			);
+			res.redirect('/admin/keys');
+		} catch (error) {
+			res.render('admin/keys/import', {
+				title: 'Importer une clé',
+				error:
+					error instanceof Error ? error.message : 'Erreur inconnue',
+				form: body,
+			});
+		}
+	}
+
 	/** Affiche le détail d'une clé avec ses clés d'API */
 	@Get('keys/:id')
 	@UseGuards(JwtAdminGuard)

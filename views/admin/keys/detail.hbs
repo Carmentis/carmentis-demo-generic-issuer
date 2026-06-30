@@ -52,7 +52,15 @@
   <div class="col-md-7">
     <div class="card shadow-sm h-100">
       <div class="card-header py-3 d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-lock-fill me-2 text-success"></i>Clé publique (Ed25519)</span>
+        <span><i class="bi bi-lock-fill me-2 text-success"></i>Clé publique</span>
+        <span>
+          <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle">{{key.algorithm}}</span>
+          {{#if key.hasCertificate}}
+          <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" title="Certificat présent dans le champ x5c">
+            <i class="bi bi-patch-check-fill me-1"></i>x5c
+          </span>
+          {{/if}}
+        </span>
       </div>
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-1">

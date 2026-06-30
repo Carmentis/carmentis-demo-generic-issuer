@@ -55,7 +55,7 @@ export class IssuerApiService {
 	getPublicKey(
 		signingKey: SigningKeyEntity,
 		format: 'jwk' | 'did-jwk' = 'jwk',
-	): Record<string, string> | string {
+	): Record<string, unknown> | string {
 		const publicJwk = this.keysService.getPublicJwk(signingKey);
 		if (format === 'did-jwk') {
 			return this.crypto.buildDidJwk(publicJwk);
@@ -123,11 +123,12 @@ export class IssuerApiService {
 
 		// Obtenir ou créer l'instance SDJwt pour cette clé
 		const sdjwt = this.getSdjwtInstance(signingKey);
+		const alg = signingKey.algorithm ?? this.crypto.algForJwk(publicJwk);
 
 		const credential = await sdjwt.issue(
 			payload as SdJwtPayload,
 			disclosureFrame,
-			{ header: { alg: 'EdDSA', typ: 'vc+sd-jwt' } },
+			{ header: { alg, typ: 'vc+sd-jwt' } },
 		);
 
 		this.logger.log(
@@ -210,7 +211,7 @@ export class IssuerApiService {
 				Promise.resolve(
 					this.crypto.verifyWithKey(data, sig, publicJwk),
 				),
-			signAlg: 'EdDSA',
+			signAlg: signingKey.algorithm ?? this.crypto.algForJwk(publicJwk),
 			hasher: (data: string, alg: string) => this.crypto.hash(data, alg),
 			hashAlg: 'sha-256',
 			saltGenerator: () => this.crypto.generateSalt(),

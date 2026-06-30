@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as crypto from 'crypto';
 import * as zlib from 'zlib';
 import { DataSource, Repository } from 'typeorm';
 import { CryptoService } from '../crypto/crypto.service';
@@ -167,7 +166,8 @@ export class StatusListService {
 		const privateJwk = this.keysService.getPrivateJwk(signingKey);
 
 		const now = Math.floor(Date.now() / 1000);
-		const header = { alg: 'EdDSA', typ: 'statuslist+jwt' };
+		const alg = signingKey.algorithm ?? this.crypto.algForJwk(publicJwk);
+		const header = { alg, typ: 'statuslist+jwt' };
 		const payload = {
 			iss: issuerDid,
 			iat: now,
@@ -186,7 +186,7 @@ export class StatusListService {
 	private async signJwt(
 		header: Record<string, string>,
 		payload: Record<string, unknown>,
-		privateJwk: Record<string, string>,
+		privateJwk: Record<string, unknown>,
 	): Promise<string> {
 		const headerB64 = Buffer.from(JSON.stringify(header)).toString(
 			'base64url',
@@ -196,12 +196,8 @@ export class StatusListService {
 		);
 		const signingInput = `${headerB64}.${payloadB64}`;
 
-		const sig = crypto.sign(null, Buffer.from(signingInput), {
-			format: 'jwk',
-			key: privateJwk as crypto.JsonWebKey,
-		});
-
-		const sigB64 = Buffer.from(sig).toString('base64url');
+		// Signature adaptée au type de clé (Ed25519/EC/RSA)
+		const sigB64 = await this.crypto.signWithKey(signingInput, privateJwk);
 		return `${signingInput}.${sigB64}`;
 	}
 }

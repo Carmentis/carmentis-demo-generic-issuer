@@ -60,10 +60,69 @@ export class KeysService {
 			encryptionIv: encrypted.iv,
 			encryptionTag: encrypted.tag,
 			publicKeyJwk: JSON.stringify(publicJwk),
+			algorithm: this.crypto.algForJwk(publicJwk),
 		});
 
 		const saved = await this.keyRepo.save(entity);
 		this.logger.log(`Clé créée : ${identifier} (id=${saved.id})`);
+		return saved;
+	}
+
+	/**
+	 * Importe une paire de clés existante au format PEM et la persiste.
+	 *
+	 * La clé publique est dérivée de la clé privée. Si un certificat PEM est
+	 * fourni, sa chaîne est ajoutée au champ `x5c` du JWK public exporté
+	 * (et donc présente dans le did:jwk dérivé).
+	 *
+	 * @param name - Nom lisible
+	 * @param identifier - Slug URL-safe unique
+	 * @param privatePem - Clé privée PEM (PKCS#8 / SEC1)
+	 * @param certificatePem - Certificat(s) PEM optionnel(s) pour le champ x5c
+	 * @throws ConflictException si l'identifier est déjà utilisé
+	 * @throws Error si le PEM est invalide ou le type de clé non supporté
+	 */
+	async importKey(
+		name: string,
+		identifier: string,
+		privatePem: string,
+		certificatePem?: string,
+	): Promise<SigningKeyEntity> {
+		const existing = await this.keyRepo.findOne({ where: { identifier } });
+		if (existing) {
+			throw new ConflictException(
+				`L'identifier "${identifier}" est déjà utilisé`,
+			);
+		}
+
+		const { publicJwk, privateJwk } =
+			this.crypto.importKeyPairFromPem(privatePem);
+
+		// Ajouter la chaîne de certificats au JWK public (champ x5c)
+		const trimmedCert = certificatePem?.trim();
+		if (trimmedCert) {
+			publicJwk.x5c = this.crypto.parseCertificateChainPem(trimmedCert);
+		}
+
+		const encrypted = this.crypto.encryptPrivateKey(
+			JSON.stringify(privateJwk),
+		);
+
+		const entity = this.keyRepo.create({
+			name,
+			identifier,
+			encryptedPrivateKey: encrypted.ciphertext,
+			encryptionIv: encrypted.iv,
+			encryptionTag: encrypted.tag,
+			publicKeyJwk: JSON.stringify(publicJwk),
+			algorithm: this.crypto.algForJwk(publicJwk),
+		});
+
+		const saved = await this.keyRepo.save(entity);
+		this.logger.log(
+			`Clé importée : ${identifier} (id=${saved.id}, alg=${entity.algorithm}` +
+				`${trimmedCert ? ', avec certificat' : ''})`,
+		);
 		return saved;
 	}
 
@@ -109,20 +168,21 @@ export class KeysService {
 	 *
 	 * @returns JWK privé en tant qu'objet JavaScript
 	 */
-	getPrivateJwk(entity: SigningKeyEntity): Record<string, string> {
+	getPrivateJwk(entity: SigningKeyEntity): Record<string, unknown> {
 		const json = this.crypto.decryptPrivateKey({
 			ciphertext: entity.encryptedPrivateKey,
 			iv: entity.encryptionIv,
 			tag: entity.encryptionTag,
 		});
-		return JSON.parse(json) as Record<string, string>;
+		return JSON.parse(json) as Record<string, unknown>;
 	}
 
 	/**
 	 * Retourne le JWK public d'une clé en tant qu'objet JavaScript.
+	 * Peut contenir un champ `x5c` (chaîne de certificats) pour les clés importées.
 	 */
-	getPublicJwk(entity: SigningKeyEntity): Record<string, string> {
-		return JSON.parse(entity.publicKeyJwk) as Record<string, string>;
+	getPublicJwk(entity: SigningKeyEntity): Record<string, unknown> {
+		return JSON.parse(entity.publicKeyJwk) as Record<string, unknown>;
 	}
 
 	/**

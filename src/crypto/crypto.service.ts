@@ -80,8 +80,116 @@ export class CryptoService {
 	 * Construit la représentation did:jwk d'une clé publique JWK.
 	 * Format : did:jwk:<base64url(JSON(publicJwk))>
 	 */
-	buildDidJwk(publicJwk: Record<string, string>): string {
+	buildDidJwk(publicJwk: Record<string, unknown>): string {
 		return `did:jwk:${base64url.encode(JSON.stringify(publicJwk))}`;
+	}
+
+	// ─────────────────────────────────────────────
+	// Détermination de l'algorithme JWS depuis un JWK
+	// ─────────────────────────────────────────────
+
+	/**
+	 * Déduit l'algorithme de signature JOSE (alg) et les paramètres node:crypto
+	 * correspondants à partir du type/courbe d'un JWK.
+	 *
+	 * Supporte : Ed25519/Ed448 (EdDSA), EC P-256/384/521 et secp256k1 (ES*), RSA (RS256).
+	 *
+	 * @throws Error si le type de clé n'est pas supporté
+	 */
+	private algParams(jwk: Record<string, unknown>): {
+		alg: string;
+		/** Algorithme de hachage node ; null pour EdDSA (signature directe). */
+		digest: string | null;
+		/** Encodage DSA pour ECDSA (raw r||s attendu par JOSE). */
+		dsaEncoding?: crypto.DSAEncoding;
+	} {
+		const kty = jwk.kty as string;
+		if (kty === 'OKP') {
+			// Ed25519 / Ed448 : signature directe sans pré-hachage
+			return { alg: 'EdDSA', digest: null };
+		}
+		if (kty === 'EC') {
+			const crv = jwk.crv as string;
+			const map: Record<string, { alg: string; digest: string }> = {
+				'P-256': { alg: 'ES256', digest: 'sha256' },
+				'P-384': { alg: 'ES384', digest: 'sha384' },
+				'P-521': { alg: 'ES512', digest: 'sha512' },
+				secp256k1: { alg: 'ES256K', digest: 'sha256' },
+			};
+			const entry = map[crv];
+			if (!entry) {
+				throw new Error(`Courbe EC non supportée : ${crv}`);
+			}
+			// ieee-p1363 → signature brute concaténée (r||s) conforme JOSE
+			return { ...entry, dsaEncoding: 'ieee-p1363' };
+		}
+		if (kty === 'RSA') {
+			return { alg: 'RS256', digest: 'sha256' };
+		}
+		throw new Error(`Type de clé non supporté : ${kty}`);
+	}
+
+	/**
+	 * Retourne l'algorithme de signature JOSE (ex: "EdDSA", "ES256", "RS256")
+	 * correspondant à un JWK (public ou privé).
+	 */
+	algForJwk(jwk: Record<string, unknown>): string {
+		return this.algParams(jwk).alg;
+	}
+
+	// ─────────────────────────────────────────────
+	// Import de clés / certificats PEM
+	// ─────────────────────────────────────────────
+
+	/**
+	 * Importe une clé privée PEM (PKCS#8 ou SEC1) et en dérive les JWK
+	 * public et privé. La clé publique est dérivée de la clé privée afin
+	 * de garantir la cohérence de la paire, quel que soit le type/courbe.
+	 *
+	 * @throws Error si le PEM est invalide ou le type de clé non supporté
+	 */
+	importKeyPairFromPem(privatePem: string): {
+		publicJwk: Record<string, unknown>;
+		privateJwk: Record<string, unknown>;
+	} {
+		const privateKey = crypto.createPrivateKey(privatePem);
+		const privateJwk = privateKey.export({ format: 'jwk' }) as Record<
+			string,
+			unknown
+		>;
+		const publicJwk = crypto
+			.createPublicKey(privateKey)
+			.export({ format: 'jwk' }) as Record<string, unknown>;
+
+		// Valide que le type est supporté (lève sinon)
+		this.algParams(publicJwk);
+
+		return { publicJwk, privateJwk };
+	}
+
+	/**
+	 * Extrait la chaîne de certificats d'un PEM en valeurs base64 DER,
+	 * telles qu'attendues dans le champ JWK `x5c` (base64 standard, non url).
+	 * Supporte plusieurs certificats concaténés (chaîne).
+	 *
+	 * @throws Error si aucun certificat valide n'est trouvé
+	 */
+	parseCertificateChainPem(certPem: string): string[] {
+		const blocks = certPem.match(
+			/-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g,
+		);
+		if (!blocks || blocks.length === 0) {
+			throw new Error('Aucun certificat PEM valide trouvé');
+		}
+		return blocks.map((block) => {
+			const base64 = block
+				.replace(/-----BEGIN CERTIFICATE-----/, '')
+				.replace(/-----END CERTIFICATE-----/, '')
+				.replace(/\s+/g, '');
+			// Valide que le contenu est bien un certificat X.509 décodable
+			new crypto.X509Certificate(block);
+			return base64;
+		});
 	}
 
 	// ─────────────────────────────────────────────
@@ -150,27 +258,35 @@ export class CryptoService {
 	 */
 	async signWithKey(
 		data: string,
-		privateJwk: Record<string, string>,
+		privateJwk: Record<string, unknown>,
 	): Promise<string> {
-		const sig = crypto.sign(null, Buffer.from(data), {
+		const { digest, dsaEncoding } = this.algParams(privateJwk);
+		const sig = crypto.sign(digest, Buffer.from(data), {
 			format: 'jwk',
 			key: privateJwk as crypto.JsonWebKey,
+			...(dsaEncoding ? { dsaEncoding } : {}),
 		});
 		return Buffer.from(sig).toString('base64url');
 	}
 
 	/**
-	 * Vérifie une signature Ed25519 avec une clé publique JWK.
+	 * Vérifie une signature avec une clé publique JWK, en sélectionnant
+	 * automatiquement l'algorithme adapté au type de clé.
 	 */
 	verifyWithKey(
 		data: string,
 		signature: string,
-		publicJwk: Record<string, string>,
+		publicJwk: Record<string, unknown>,
 	): boolean {
+		const { digest, dsaEncoding } = this.algParams(publicJwk);
 		return crypto.verify(
-			null,
+			digest,
 			Buffer.from(data),
-			{ format: 'jwk', key: publicJwk as crypto.JsonWebKey },
+			{
+				format: 'jwk',
+				key: publicJwk as crypto.JsonWebKey,
+				...(dsaEncoding ? { dsaEncoding } : {}),
+			},
 			Buffer.from(signature, 'base64url'),
 		);
 	}

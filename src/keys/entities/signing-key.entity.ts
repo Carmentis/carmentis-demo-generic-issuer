@@ -43,9 +43,19 @@ export class SigningKeyEntity {
 	@Column({ type: 'text' })
 	encryptionTag: string;
 
-	/** JWK public sérialisé en JSON (non confidentiel) */
+	/**
+	 * JWK public sérialisé en JSON (non confidentiel).
+	 * Pour les clés importées avec certificat, contient le champ `x5c`.
+	 */
 	@Column({ type: 'text' })
 	publicKeyJwk: string;
+
+	/**
+	 * Algorithme de signature JOSE (ex: "EdDSA", "ES256", "RS256").
+	 * Nullable pour compatibilité avec les anciennes lignes (déduit alors du JWK).
+	 */
+	@Column({ type: 'text', nullable: true })
+	algorithm: string | null;
 
 	/**
 	 * Taille de la liste de statut en bits.

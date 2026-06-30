@@ -28,14 +28,14 @@ export class AdminService {
 			const apiKeys = await this.apiKeyService.findAllBySigningKey(
 				key.id,
 			);
+			const publicJwk = this.keysService.getPublicJwk(key);
 			result.push({
 				...key,
+				algorithm: key.algorithm ?? this.crypto.algForJwk(publicJwk),
 				apiKeyCount: apiKeys.length,
 				activeApiKeyCount: apiKeys.filter((k) => !k.isRevoked).length,
-				publicJwk: this.keysService.getPublicJwk(key),
-				didJwk: this.crypto.buildDidJwk(
-					this.keysService.getPublicJwk(key),
-				),
+				publicJwk,
+				didJwk: this.crypto.buildDidJwk(publicJwk),
 			});
 		}
 
@@ -53,6 +53,8 @@ export class AdminService {
 		return {
 			...key,
 			apiKeys,
+			algorithm: key.algorithm ?? this.crypto.algForJwk(publicJwk),
+			hasCertificate: Array.isArray(publicJwk.x5c),
 			publicJwkFormatted: JSON.stringify(publicJwk, null, 2),
 			didJwk: this.crypto.buildDidJwk(publicJwk),
 			statusListPercent: Math.round(
@@ -75,6 +77,34 @@ export class AdminService {
 			);
 		}
 		return this.keysService.createKey(name, identifier);
+	}
+
+	/**
+	 * Importe une clé de signature existante au format PEM.
+	 * Valide le format de l'identifier (slug) et la présence de la clé privée.
+	 *
+	 * @throws Error si l'identifier est invalide ou la clé privée manquante
+	 */
+	async importKey(
+		name: string,
+		identifier: string,
+		privatePem: string,
+		certificatePem?: string,
+	) {
+		if (!/^[a-z0-9-]+$/.test(identifier)) {
+			throw new Error(
+				"L'identifier ne peut contenir que des lettres minuscules, des chiffres et des tirets",
+			);
+		}
+		if (!privatePem || !privatePem.trim()) {
+			throw new Error('La clé privée PEM est requise');
+		}
+		return this.keysService.importKey(
+			name,
+			identifier,
+			privatePem,
+			certificatePem,
+		);
 	}
 
 	/**
