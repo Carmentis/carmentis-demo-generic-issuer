@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { ConfigService } from './config/config.service';
+import { IssuerApiModule } from './issuer-api/issuer-api.module';
 
 async function bootstrap() {
 	const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -70,21 +71,22 @@ async function bootstrap() {
 	// ─────────────────────────────────────────────
 	// Swagger / OpenAPI
 	// ─────────────────────────────────────────────
-	const swaggerDoc = SwaggerModule.createDocument(
-		app,
-		new DocumentBuilder()
-			.setTitle('SD-JWT Issuer API')
-			.setDescription(
-				'API générique d\'émission et de vérification de credentials SD-JWT-VC (IETF draft).\n\n' +
-				'Les endpoints d\'émission sont protégés par une clé d\'API générée depuis l\'interface d\'administration.',
-			)
-			.setVersion('1.0')
-			.addTag('Credentials', 'Émission, vérification et clé publique')
-			.addTag('Status List', 'Liste de révocation IETF Token Status List')
-			.addApiKey({ type: 'apiKey', in: 'header', name: 'X-API-Key' }, 'X-API-Key')
-			.addBearerAuth({ type: 'http', scheme: 'bearer' }, 'Bearer')
-			.build(),
-	);
+	const swaggerConfig = new DocumentBuilder()
+		.setTitle('SD-JWT Issuer API')
+		.setDescription(
+			'API générique d\'émission et de vérification de credentials SD-JWT-VC (IETF draft).\n\n' +
+			'Les endpoints d\'émission sont protégés par une clé d\'API générée depuis l\'interface d\'administration.',
+		)
+		.setVersion('1.0')
+		.addTag('Credentials', 'Émission, vérification et clé publique')
+		.addTag('Status List', 'Liste de révocation IETF Token Status List')
+		.addApiKey({ type: 'apiKey', in: 'header', name: 'X-API-Key' }, 'X-API-Key')
+		.addBearerAuth({ type: 'http', scheme: 'bearer' }, 'Bearer')
+		.build();
+
+	const swaggerDoc = SwaggerModule.createDocument(app, swaggerConfig, {
+		include: [IssuerApiModule],
+	});
 	// UI : /docs   — JSON : /docs-json   — YAML : /docs-yaml
 	SwaggerModule.setup('docs', app, swaggerDoc, {
 		jsonDocumentUrl: 'docs/openapi.json',
