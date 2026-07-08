@@ -17,6 +17,9 @@
 # Var d'env : PORT
 port = 3000
 
+# URL de base de l'issuer (sans '/' finale)
+issuer_base_url = 'https://issuer.example.com'
+
 [storage]
 # Répertoire de stockage contenant :
 #   - issuer.sqlite        : base de données SQLite

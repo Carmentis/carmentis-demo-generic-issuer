@@ -7,6 +7,7 @@ import { KeysService } from '../keys/keys.service';
 import { SigningKeyEntity } from '../keys/entities/signing-key.entity';
 import { StatusListService } from '../status-list/status-list.service';
 import { IssueCredentialDto } from './dto/issue-credential.dto';
+import { ConfigService } from '../config/config.service';
 
 /**
  * Résultat de la vérification d'un SD-JWT-VC.
@@ -37,6 +38,7 @@ export class IssuerApiService {
 	>();
 
 	constructor(
+		private readonly config: ConfigService,
 		private readonly keysService: KeysService,
 		private readonly crypto: CryptoService,
 		private readonly statusList: StatusListService,
@@ -94,7 +96,9 @@ export class IssuerApiService {
 		const status = await this.statusList.allocateIndex(signingKey, jti);
 
 		// Construire l'URL de la liste de statut (absolue, basée sur la requête entrante)
-		const baseUrl = `${req.protocol}://${req.get('host')}`;
+		const baseUrl =
+			this.config.issuerBaseUrl ??
+			`${req.protocol}://${req.get('host')}`;
 		const statusUri = `${baseUrl}/api/${signingKey.identifier}/credential/status`;
 
 		// Construire le payload complet du SD-JWT-VC
