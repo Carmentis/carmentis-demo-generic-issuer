@@ -157,7 +157,10 @@ export class StatusListService {
 		}
 
 		// Compresser avec gzip et encoder en base64url
-		const compressed = zlib.gzipSync(Buffer.from(bitArray));
+		const compressed = zlib.deflateSync(Buffer.from(bitArray), {
+			level: 9,
+		});
+		//const compressed = zlib.gzipSync(Buffer.from(bitArray));
 		const encoded = compressed.toString('base64url');
 
 		// Construire le payload JWT de liste de statut
@@ -173,10 +176,13 @@ export class StatusListService {
 			iat: now,
 			exp: now + 3600, // Valable 1 heure
 			lst: encoded,
+			bits: 1,
 			statusList: {
+				bits: 1,
 				lst: encoded,
 			},
 			status_list: {
+				bits: 1,
 				lst: encoded,
 			},
 		};
