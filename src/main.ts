@@ -66,6 +66,7 @@ async function bootstrap() {
 		}),
 	);
 	app.setBaseViewsDir(viewsDir);
+	app.enableCors();
 	app.setViewEngine('hbs');
 
 	// ─────────────────────────────────────────────
