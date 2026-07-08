@@ -173,6 +173,12 @@ export class StatusListService {
 			iat: now,
 			exp: now + 3600, // Valable 1 heure
 			lst: encoded,
+			statusList: {
+				lst: encoded,
+			},
+			status_list: {
+				lst: encoded,
+			},
 		};
 
 		// Signer le JWT manuellement (même approche que pour le SD-JWT-VC)
